@@ -1,0 +1,42 @@
+# Dependências do Node.js
+node_modules/
+backend/node_modules/
+
+# Logs de execução e depuração
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Arquivos de ambiente e segredos
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Arquivos do Sistema Operacional
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Configurações de IDEs e Editores
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Pastas temporárias e de build
+dist/
+build/
+.cache/
+tmp/
+temp/
