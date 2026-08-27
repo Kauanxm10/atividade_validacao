@@ -21,6 +21,18 @@
         <h1>Task Tracker</h1>
         <p class="tagline">Gerenciamento de tarefas e projetos</p>
       </div>
+      <nav class="nav-tabs" aria-label="Navegação do aplicativo">
+        <button id="tab-tarefas" class="tab-btn active" aria-selected="true" type="button">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          <span>Minhas Tarefas</span>
+          <span id="badge-count-ativas" class="nav-badge">0</span>
+        </button>
+        <button id="tab-historico" class="tab-btn" aria-selected="false" type="button">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>Histórico</span>
+          <span id="badge-count-concluidas" class="nav-badge">0</span>
+        </button>
+      </nav>
     </div>
   </header>
 
@@ -28,24 +40,44 @@
 
   <main id="conteudo-principal" class="container">
 
-    <section class="actions-section">
-      <div class="actions-wrapper">
-        <h2 id="titulo-lista">Minhas Tarefas</h2>
-        <button id="btn-nova-tarefa" class="btn-primary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          <span>Nova Tarefa</span>
-        </button>
-      </div>
-    </section>
+    <!-- PÁGINA 1: TAREFAS ATIVAS -->
+    <div id="pagina-tarefas" class="page-view">
+      <section class="actions-section">
+        <div class="actions-wrapper">
+          <h2 id="titulo-lista">Minhas Tarefas</h2>
+          <button id="btn-nova-tarefa" class="btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Nova Tarefa</span>
+          </button>
+        </div>
+      </section>
 
-    <section class="tasks-section" aria-labelledby="titulo-lista">
-      <div id="lista-tarefas" class="tasks-container" role="region" aria-live="polite">
-      </div>
-    </section>
+      <section class="tasks-section" aria-labelledby="titulo-lista">
+        <div id="lista-tarefas" class="tasks-container" role="region" aria-live="polite">
+        </div>
+      </section>
+    </div>
+
+    <!-- PÁGINA 2: HISTÓRICO DE CONCLUÍDAS -->
+    <div id="pagina-historico" class="page-view hidden">
+      <section class="actions-section">
+        <div class="actions-wrapper">
+          <div>
+            <h2 id="titulo-historico">Histórico de Concluídas</h2>
+            <p class="tagline">Registro de todas as tarefas finalizadas</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="tasks-section" aria-labelledby="titulo-historico">
+        <div id="lista-historico" class="tasks-container" role="region" aria-live="polite">
+        </div>
+      </section>
+    </div>
 
   </main>
 

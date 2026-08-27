@@ -1,8 +1,19 @@
 const API_URL = 'http://localhost:3000/api/tarefas';
 
 let tarefasState = [];
+let abaAtual = 'tarefas';
+
+const tabTarefas = document.getElementById('tab-tarefas');
+const tabHistorico = document.getElementById('tab-historico');
+const paginaTarefas = document.getElementById('pagina-tarefas');
+const paginaHistorico = document.getElementById('pagina-historico');
+
+const badgeCountAtivas = document.getElementById('badge-count-ativas');
+const badgeCountConcluidas = document.getElementById('badge-count-concluidas');
 
 const listaTarefasEl = document.getElementById('lista-tarefas');
+const listaHistoricoEl = document.getElementById('lista-historico');
+
 const modalEl = document.getElementById('modal-tarefa');
 const formTarefa = document.getElementById('form-tarefa');
 const btnNovaTarefa = document.getElementById('btn-nova-tarefa');
@@ -17,6 +28,29 @@ const selectPrioridade = document.getElementById('select-prioridade');
 const inputVencimento = document.getElementById('input-vencimento');
 
 
+function alternarAba(novaAba) {
+  abaAtual = novaAba;
+
+  if (abaAtual === 'tarefas') {
+    tabTarefas.classList.add('active');
+    tabTarefas.setAttribute('aria-selected', 'true');
+    tabHistorico.classList.remove('active');
+    tabHistorico.setAttribute('aria-selected', 'false');
+
+    paginaTarefas.classList.remove('hidden');
+    paginaHistorico.classList.add('hidden');
+  } else {
+    tabHistorico.classList.add('active');
+    tabHistorico.setAttribute('aria-selected', 'true');
+    tabTarefas.classList.remove('active');
+    tabTarefas.setAttribute('aria-selected', 'false');
+
+    paginaHistorico.classList.remove('hidden');
+    paginaTarefas.classList.add('hidden');
+  }
+}
+
+
 async function carregarTarefas() {
   try {
     const resposta = await fetch(API_URL);
@@ -26,10 +60,20 @@ async function carregarTarefas() {
     const resultado = await resposta.json();
     tarefasState = resultado.dados;
     
+    atualizarContadores();
     renderizarCards();
+    renderizarHistorico();
   } catch (erro) {
     exibirToast(erro.message, 'error');
   }
+}
+
+function atualizarContadores() {
+  const ativas = tarefasState.filter(t => t.status !== 'Concluída').length;
+  const concluidas = tarefasState.filter(t => t.status === 'Concluída').length;
+
+  if (badgeCountAtivas) badgeCountAtivas.textContent = ativas;
+  if (badgeCountConcluidas) badgeCountConcluidas.textContent = concluidas;
 }
 
 async function salvarTarefa(event) {
@@ -102,10 +146,12 @@ async function excluirTarefa(id, titulo) {
 function renderizarCards() {
   listaTarefasEl.innerHTML = '';
 
-  if (tarefasState.length === 0) {
+  const tarefasAtivas = tarefasState.filter(t => t.status !== 'Concluída');
+
+  if (tarefasAtivas.length === 0) {
     listaTarefasEl.innerHTML = `
       <div style="grid-column: 1/-1; text-align: center; padding: 2.5rem; color: var(--text-muted);">
-        <p>Nenhuma tarefa cadastrada.</p>
+        <p>Nenhuma tarefa pendente ou em andamento.</p>
       </div>
     `;
     return;
@@ -118,7 +164,7 @@ function renderizarCards() {
   ];
 
   prioridades.forEach(p => {
-    const tarefasDoGrupo = tarefasState.filter(t => t.prioridade === p.chave);
+    const tarefasDoGrupo = tarefasAtivas.filter(t => t.prioridade === p.chave);
 
     const grupoSection = document.createElement('section');
     grupoSection.className = 'priority-group';
@@ -156,6 +202,88 @@ function renderizarCards() {
   });
 }
 
+
+function renderizarHistorico() {
+  if (!listaHistoricoEl) return;
+  listaHistoricoEl.innerHTML = '';
+
+  const tarefasConcluidas = tarefasState.filter(t => t.status === 'Concluída');
+
+  if (tarefasConcluidas.length === 0) {
+    listaHistoricoEl.innerHTML = `
+      <div style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-card); border: 1px dashed var(--border-color);">
+        <svg style="width: 48px; height: 48px; margin-bottom: 1rem; color: #94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.5rem;">Nenhuma tarefa no histórico</h3>
+        <p>As tarefas marcadas como "Concluída" aparecerão aqui.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'tasks-list';
+
+  tarefasConcluidas.forEach(tarefa => {
+    const card = criarCardHistorico(tarefa);
+    list.appendChild(card);
+  });
+
+  listaHistoricoEl.appendChild(list);
+}
+
+function criarCardHistorico(tarefa) {
+  const card = document.createElement('article');
+  card.className = 'task-card task-card-completed';
+
+  const classePrioridade = `badge-${tarefa.prioridade.toLowerCase().replace('é', 'e')}`;
+
+  const dataExibicao = tarefa.dataConclusao
+    ? `Concluída em ${formatarData(tarefa.dataConclusao.split('T')[0])}`
+    : (tarefa.dataVencimento ? `Vencimento: ${formatarData(tarefa.dataVencimento)}` : 'Concluída');
+
+  card.innerHTML = `
+    <div class="task-info">
+      <div class="task-card-header">
+        <span class="status-tag status-tag-concluida">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Concluída
+        </span>
+        <h3 class="task-title task-title-completed">${escaparHTML(tarefa.titulo)}</h3>
+        <span class="badge ${classePrioridade}">${tarefa.prioridade}</span>
+      </div>
+      <p class="task-desc">${escaparHTML(tarefa.descricao || 'Sem descrição.')}</p>
+    </div>
+
+    <div class="task-side">
+      <div class="task-meta">
+        <span>
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          ${escaparHTML(tarefa.categoria)}
+        </span>
+        <span>
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          ${dataExibicao}
+        </span>
+      </div>
+      <div class="task-actions">
+        <button class="btn-secondary btn-reabrir" title="Reabrir tarefa">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+          Reabrir
+        </button>
+        <button class="btn-danger btn-excluir">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Excluir
+        </button>
+      </div>
+    </div>
+  `;
+
+  card.querySelector('.btn-reabrir').addEventListener('click', () => alterarStatusRapido(tarefa, 'Pendente'));
+  card.querySelector('.btn-excluir').addEventListener('click', () => excluirTarefa(tarefa.id, tarefa.titulo));
+
+  return card;
+}
+
 async function alterarStatusRapido(tarefa, novoStatus) {
   if (tarefa.status === novoStatus) return;
 
@@ -174,7 +302,11 @@ async function alterarStatusRapido(tarefa, novoStatus) {
     const resultado = await resposta.json();
     if (!resposta.ok) throw new Error(resultado.mensagem);
 
-    exibirToast(`Status alterado para "${novoStatus}"!`, 'success');
+    const mensagemToast = novoStatus === 'Concluída'
+      ? 'Tarefa enviada para o histórico de concluídas!'
+      : `Status alterado para "${novoStatus}"!`;
+
+    exibirToast(mensagemToast, 'success');
     carregarTarefas();
   } catch (erro) {
     exibirToast(erro.message, 'error');
@@ -340,6 +472,9 @@ function obterDataHojeISO() {
   const dia = String(hoje.getDate()).padStart(2, '0');
   return `${ano}-${mes}-${dia}`;
 }
+
+if (tabTarefas) tabTarefas.addEventListener('click', () => alternarAba('tarefas'));
+if (tabHistorico) tabHistorico.addEventListener('click', () => alternarAba('historico'));
 
 btnNovaTarefa.addEventListener('click', abrirModalParaCriacao);
 btnFecharModal.addEventListener('click', fecharModal);

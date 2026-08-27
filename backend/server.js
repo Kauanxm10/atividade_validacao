@@ -16,7 +16,8 @@ let tarefas = [
     prioridade: "Alta",
     status: "Concluída",
     dataVencimento: "2026-08-30",
-    dataCriacao: new Date().toISOString()
+    dataCriacao: new Date().toISOString(),
+    dataConclusao: new Date().toISOString()
   },
   {
     id: "2",
@@ -26,7 +27,8 @@ let tarefas = [
     prioridade: "Média",
     status: "Em Andamento",
     dataVencimento: "2026-09-02",
-    dataCriacao: new Date().toISOString()
+    dataCriacao: new Date().toISOString(),
+    dataConclusao: null
   },
   {
     id: "3",
@@ -36,7 +38,8 @@ let tarefas = [
     prioridade: "Alta",
     status: "Pendente",
     dataVencimento: "2026-09-05",
-    dataCriacao: new Date().toISOString()
+    dataCriacao: new Date().toISOString(),
+    dataConclusao: null
   },
   {
     id: "4",
@@ -46,7 +49,8 @@ let tarefas = [
     prioridade: "Média",
     status: "Em Andamento",
     dataVencimento: "2026-09-01",
-    dataCriacao: new Date().toISOString()
+    dataCriacao: new Date().toISOString(),
+    dataConclusao: null
   },
   {
     id: "5",
@@ -56,7 +60,8 @@ let tarefas = [
     prioridade: "Baixa",
     status: "Concluída",
     dataVencimento: "2026-08-28",
-    dataCriacao: new Date().toISOString()
+    dataCriacao: new Date().toISOString(),
+    dataConclusao: new Date().toISOString()
   },
   {
     id: "6",
@@ -66,7 +71,8 @@ let tarefas = [
     prioridade: "Alta",
     status: "Pendente",
     dataVencimento: "2026-08-29",
-    dataCriacao: new Date().toISOString()
+    dataCriacao: new Date().toISOString(),
+    dataConclusao: null
   },
   {
     id: "7",
@@ -76,7 +82,8 @@ let tarefas = [
     prioridade: "Baixa",
     status: "Pendente",
     dataVencimento: "2026-09-10",
-    dataCriacao: new Date().toISOString()
+    dataCriacao: new Date().toISOString(),
+    dataConclusao: null
   }
 ];
 
@@ -178,7 +185,8 @@ app.post('/api/tarefas', (req, res) => {
     prioridade,
     status: statusDefinido,
     dataVencimento: dataVencimento || null,
-    dataCriacao: new Date().toISOString()
+    dataCriacao: new Date().toISOString(),
+    dataConclusao: statusDefinido === "Concluída" ? new Date().toISOString() : null
   };
 
   tarefas.push(novaTarefa);
@@ -212,6 +220,13 @@ app.put('/api/tarefas/:id', (req, res) => {
     });
   }
 
+  let dataConclusao = tarefas[index].dataConclusao || null;
+  if (status === "Concluída" && tarefas[index].status !== "Concluída") {
+    dataConclusao = new Date().toISOString();
+  } else if (status !== "Concluída") {
+    dataConclusao = null;
+  }
+
   tarefas[index] = {
     ...tarefas[index],
     titulo: titulo.trim(),
@@ -219,7 +234,8 @@ app.put('/api/tarefas/:id', (req, res) => {
     categoria: categoria.trim(),
     prioridade,
     status,
-    dataVencimento: dataVencimento || null
+    dataVencimento: dataVencimento || null,
+    dataConclusao
   };
 
   res.json({
