@@ -8,14 +8,12 @@ const formTarefa = document.getElementById('form-tarefa');
 const btnNovaTarefa = document.getElementById('btn-nova-tarefa');
 const btnFecharModal = document.getElementById('btn-fechar-modal');
 const btnCancelar = document.getElementById('btn-cancelar');
-const btnTema = document.getElementById('btn-tema');
 
 const inputId = document.getElementById('tarefa-id');
 const inputTitulo = document.getElementById('input-titulo');
 const inputDescricao = document.getElementById('input-descricao');
 const selectCategoria = document.getElementById('select-categoria');
 const selectPrioridade = document.getElementById('select-prioridade');
-const selectStatus = document.getElementById('select-status');
 const inputVencimento = document.getElementById('input-vencimento');
 
 
@@ -39,17 +37,23 @@ async function salvarTarefa(event) {
 
   if (!validarFormulario()) return;
 
+  const id = inputId.value;
+  const ehEdicao = Boolean(id);
+
+  let statusTarefa = 'Pendente';
+  if (ehEdicao) {
+    const tarefaExistente = tarefasState.find(t => t.id === id);
+    if (tarefaExistente) statusTarefa = tarefaExistente.status;
+  }
+
   const dadosTarefa = {
     titulo: inputTitulo.value.trim(),
     descricao: inputDescricao.value.trim(),
     categoria: selectCategoria.value,
     prioridade: selectPrioridade.value,
-    status: selectStatus.value,
+    status: statusTarefa,
     dataVencimento: inputVencimento.value || null
   };
-
-  const id = inputId.value;
-  const ehEdicao = Boolean(id);
 
   const url = ehEdicao ? `${API_URL}/${id}` : API_URL;
   const metodo = ehEdicao ? 'PUT' : 'POST';
@@ -107,49 +111,158 @@ function renderizarCards() {
     return;
   }
 
-  tarefasState.forEach(tarefa => {
-    const card = document.createElement('article');
-    card.className = 'task-card';
+  const prioridades = [
+    { chave: 'Alta', titulo: 'Prioridade Alta', badgeClass: 'badge-alta' },
+    { chave: 'Média', titulo: 'Prioridade Média', badgeClass: 'badge-media' },
+    { chave: 'Baixa', titulo: 'Prioridade Baixa', badgeClass: 'badge-baixa' }
+  ];
 
-    const classePrioridade = `badge-${tarefa.prioridade.toLowerCase().replace('é', 'e')}`;
+  prioridades.forEach(p => {
+    const tarefasDoGrupo = tarefasState.filter(t => t.prioridade === p.chave);
 
-    card.innerHTML = `
-      <div>
-        <div class="task-card-header">
-          <h3 class="task-title">${escaparHTML(tarefa.titulo)}</h3>
-          <span class="badge ${classePrioridade}">${tarefa.prioridade}</span>
-        </div>
-        <p class="task-desc">${escaparHTML(tarefa.descricao || 'Sem descrição.')}</p>
+    const grupoSection = document.createElement('section');
+    grupoSection.className = 'priority-group';
+
+    const header = document.createElement('div');
+    header.className = 'priority-group-header';
+    header.innerHTML = `
+      <div class="priority-title-wrap">
+        <span class="badge ${p.badgeClass}">${p.chave}</span>
+        <h3 class="priority-group-title">${p.titulo}</h3>
       </div>
-
-      <div>
-        <div class="task-meta">
-          <span>📁 ${escaparHTML(tarefa.categoria)}</span>
-          <span>📅 ${tarefa.dataVencimento ? formatarData(tarefa.dataVencimento) : 'Sem prazo'}</span>
-        </div>
-        <div class="task-actions">
-          <button class="btn-secondary btn-editar">✏️ Editar</button>
-          <button class="btn-danger btn-excluir">🗑️ Excluir</button>
-        </div>
-      </div>
+      <span class="priority-count">${tarefasDoGrupo.length} ${tarefasDoGrupo.length === 1 ? 'tarefa' : 'tarefas'}</span>
     `;
 
-    card.querySelector('.btn-editar').addEventListener('click', () => abrirModalParaEdicao(tarefa));
-    card.querySelector('.btn-excluir').addEventListener('click', () => excluirTarefa(tarefa.id, tarefa.titulo));
+    grupoSection.appendChild(header);
 
-    listaTarefasEl.appendChild(card);
+    const list = document.createElement('div');
+    list.className = 'tasks-list';
+
+    if (tarefasDoGrupo.length === 0) {
+      list.innerHTML = `
+        <div class="empty-priority-state">
+          <p>Nenhuma tarefa de ${p.titulo.toLowerCase()}.</p>
+        </div>
+      `;
+    } else {
+      tarefasDoGrupo.forEach(tarefa => {
+        const card = criarCardTarefa(tarefa);
+        list.appendChild(card);
+      });
+    }
+
+    grupoSection.appendChild(list);
+    listaTarefasEl.appendChild(grupoSection);
   });
+}
+
+async function alterarStatusRapido(tarefa, novoStatus) {
+  if (tarefa.status === novoStatus) return;
+
+  const dadosAtualizados = {
+    ...tarefa,
+    status: novoStatus
+  };
+
+  try {
+    const resposta = await fetch(`${API_URL}/${tarefa.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dadosAtualizados)
+    });
+
+    const resultado = await resposta.json();
+    if (!resposta.ok) throw new Error(resultado.mensagem);
+
+    exibirToast(`Status alterado para "${novoStatus}"!`, 'success');
+    carregarTarefas();
+  } catch (erro) {
+    exibirToast(erro.message, 'error');
+  }
+}
+
+function criarCardTarefa(tarefa) {
+  const card = document.createElement('article');
+  card.className = 'task-card';
+
+  const classePrioridade = `badge-${tarefa.prioridade.toLowerCase().replace('é', 'e')}`;
+  
+  const statusMap = {
+    'Pendente': 'pendente',
+    'Em Andamento': 'andamento',
+    'Concluída': 'concluida'
+  };
+  const statusSlug = statusMap[tarefa.status] || 'pendente';
+  const classeStatusTag = `status-tag status-tag-${statusSlug}`;
+
+  card.innerHTML = `
+    <div class="task-info">
+      <div class="task-card-header">
+        <h3 class="task-title">${escaparHTML(tarefa.titulo)}</h3>
+        <span class="badge ${classePrioridade}">${tarefa.prioridade}</span>
+        <span class="${classeStatusTag}">${escaparHTML(tarefa.status)}</span>
+      </div>
+      <p class="task-desc">${escaparHTML(tarefa.descricao || 'Sem descrição.')}</p>
+    </div>
+
+    <div class="task-side">
+      <div class="task-meta">
+        <span>
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          ${escaparHTML(tarefa.categoria)}
+        </span>
+        <span>
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          ${tarefa.dataVencimento ? formatarData(tarefa.dataVencimento) : 'Sem prazo'}
+        </span>
+      </div>
+      <div class="task-actions">
+        <select class="select-status-rapido" aria-label="Alterar status rápido">
+          <option value="Pendente" ${tarefa.status === 'Pendente' ? 'selected' : ''}>Pendente</option>
+          <option value="Em Andamento" ${tarefa.status === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
+          <option value="Concluída" ${tarefa.status === 'Concluída' ? 'selected' : ''}>Concluída</option>
+        </select>
+        <button class="btn-secondary btn-editar">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Editar
+        </button>
+        <button class="btn-danger btn-excluir">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Excluir
+        </button>
+      </div>
+    </div>
+  `;
+
+  card.querySelector('.select-status-rapido').addEventListener('change', (e) => {
+    alterarStatusRapido(tarefa, e.target.value);
+  });
+  card.querySelector('.btn-editar').addEventListener('click', () => abrirModalParaEdicao(tarefa));
+  card.querySelector('.btn-excluir').addEventListener('click', () => excluirTarefa(tarefa.id, tarefa.titulo));
+
+  return card;
 }
 
 
 function validarFormulario() {
   let valido = true;
   document.getElementById('erro-titulo').textContent = '';
+  const erroVencimentoEl = document.getElementById('erro-vencimento');
+  if (erroVencimentoEl) erroVencimentoEl.textContent = '';
   
   if (!inputTitulo.value.trim() || inputTitulo.value.trim().length < 3) {
     document.getElementById('erro-titulo').textContent = 'Título é obrigatório (mínimo 3 caracteres).';
     inputTitulo.focus();
     valido = false;
+  }
+
+  if (inputVencimento.value) {
+    const hoje = obterDataHojeISO();
+    if (inputVencimento.value < hoje) {
+      if (erroVencimentoEl) erroVencimentoEl.textContent = 'A data de vencimento não pode ser no passado.';
+      if (valido) inputVencimento.focus();
+      valido = false;
+    }
   }
 
   return valido;
@@ -159,7 +272,11 @@ function abrirModalParaCriacao() {
   document.getElementById('modal-titulo').textContent = 'Nova Tarefa';
   formTarefa.reset();
   inputId.value = '';
+  const hoje = obterDataHojeISO();
+  inputVencimento.min = hoje;
   document.getElementById('erro-titulo').textContent = '';
+  const erroVencimentoEl = document.getElementById('erro-vencimento');
+  if (erroVencimentoEl) erroVencimentoEl.textContent = '';
   modalEl.classList.remove('hidden');
   inputTitulo.focus();
 }
@@ -171,9 +288,12 @@ function abrirModalParaEdicao(tarefa) {
   inputDescricao.value = tarefa.descricao || '';
   selectCategoria.value = tarefa.categoria;
   selectPrioridade.value = tarefa.prioridade;
-  selectStatus.value = tarefa.status;
   inputVencimento.value = tarefa.dataVencimento || '';
+  const hoje = obterDataHojeISO();
+  inputVencimento.min = hoje;
   document.getElementById('erro-titulo').textContent = '';
+  const erroVencimentoEl = document.getElementById('erro-vencimento');
+  if (erroVencimentoEl) erroVencimentoEl.textContent = '';
   modalEl.classList.remove('hidden');
   inputTitulo.focus();
 }
@@ -213,13 +333,17 @@ function formatarData(dataISO) {
   return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
+function obterDataHojeISO() {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoje.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
 btnNovaTarefa.addEventListener('click', abrirModalParaCriacao);
 btnFecharModal.addEventListener('click', fecharModal);
 btnCancelar.addEventListener('click', fecharModal);
 formTarefa.addEventListener('submit', salvarTarefa);
-
-btnTema.addEventListener('click', () => {
-  document.body.classList.toggle('dark-theme');
-});
 
 document.addEventListener('DOMContentLoaded', carregarTarefas);

@@ -37,6 +37,46 @@ let tarefas = [
     status: "Pendente",
     dataVencimento: "2026-09-05",
     dataCriacao: new Date().toISOString()
+  },
+  {
+    id: "4",
+    titulo: "Refatorar componentes de UI no Front-end",
+    descricao: "Atualizar layout para cards arredondados, fonte moderna e ícones minimalistas.",
+    categoria: "Projetos",
+    prioridade: "Média",
+    status: "Em Andamento",
+    dataVencimento: "2026-09-01",
+    dataCriacao: new Date().toISOString()
+  },
+  {
+    id: "5",
+    titulo: "Organizar documentação no README.md",
+    descricao: "Escrever visão geral, estrutura do projeto e instruções de execução da aplicação.",
+    categoria: "Trabalho",
+    prioridade: "Baixa",
+    status: "Concluída",
+    dataVencimento: "2026-08-28",
+    dataCriacao: new Date().toISOString()
+  },
+  {
+    id: "6",
+    titulo: "Revisar entrega da avaliação com a equipe",
+    descricao: "Validar todos os requisitos funcionais e não funcionais exigidos.",
+    categoria: "Trabalho",
+    prioridade: "Alta",
+    status: "Pendente",
+    dataVencimento: "2026-08-29",
+    dataCriacao: new Date().toISOString()
+  },
+  {
+    id: "7",
+    titulo: "Planejar próximos passos dos estudos",
+    descricao: "Mapear conteúdos avançados de arquitetura de software e testes automatizados.",
+    categoria: "Pessoal",
+    prioridade: "Baixa",
+    status: "Pendente",
+    dataVencimento: "2026-09-10",
+    dataCriacao: new Date().toISOString()
   }
 ];
 
@@ -58,6 +98,18 @@ function validarTarefa(dados) {
     erros.push("O status deve ser 'Pendente', 'Em Andamento' ou 'Concluída'.");
   }
   
+  if (dados.dataVencimento) {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const hojeISO = `${ano}-${mes}-${dia}`;
+
+    if (dados.dataVencimento < hojeISO) {
+      erros.push("A data de vencimento não pode ser uma data no passado.");
+    }
+  }
+
   return erros;
 }
 
@@ -107,9 +159,9 @@ app.get('/api/tarefas/:id', (req, res) => {
 
 app.post('/api/tarefas', (req, res) => {
   const { titulo, descricao, categoria, prioridade, status, dataVencimento } = req.body;
+  const statusDefinido = status || "Pendente";
 
-  // Validação no servidor
-  const erros = validarTarefa({ titulo, categoria, prioridade, status });
+  const erros = validarTarefa({ titulo, categoria, prioridade, status: statusDefinido });
   if (erros.length > 0) {
     return res.status(400).json({
       sucesso: false,
@@ -124,7 +176,7 @@ app.post('/api/tarefas', (req, res) => {
     descricao: descricao ? descricao.trim() : "",
     categoria: categoria.trim(),
     prioridade,
-    status,
+    status: statusDefinido,
     dataVencimento: dataVencimento || null,
     dataCriacao: new Date().toISOString()
   };
